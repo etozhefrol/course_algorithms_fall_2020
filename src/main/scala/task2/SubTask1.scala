@@ -8,9 +8,15 @@ object SubTask1 {
   val E = 0.001
 
   def main(args: Array[String]): Unit = {
-    runTask1()
-    runTask2()
-    runTask3()
+    def runTask(section: (Double, Double))(f: Double => Double): Unit = {
+      println(bruteForce(section)(f))
+      println(dichotomy(section)(f))
+      println(goldenSection(section)(f))
+    }
+
+    runTask((0.0, 1.0))(f1)
+    runTask((0.0, 1.0))(f2)
+    runTask((0.01, 1.0))(f3)
   }
 
   def f1(x: Double): Double = Math.pow(x, 3)
@@ -90,49 +96,5 @@ object SubTask1 {
     }
 
     (fIterator, iIterator)
-  }
-
-  def runTask1(): Unit = {
-    println("f1")
-    println(bruteForce((0.0, 1.0))(f1))
-    println(dichotomy((0.0, 1.0))(f1))
-    println(goldenSection((0.0, 1.0))(f1))
-  }
-
-  def runTask2(): Unit = {
-    println("f2")
-    println(bruteForce((0.0, 1.0))(f2))
-    println(dichotomy((0.0, 1.0))(f2))
-    println(goldenSection((0.0, 1.0))(f2))
-  }
-
-  def runTask3(): Unit = {
-    println("f3")
-    println(bruteForce((0.01, 1.0))(f3))
-    println(dichotomy((0.01, 1.0))(f3))
-    println(goldenSection((0.01, 1.0))(f3))
-  }
-
-  def plotGraph(array: Array[Long]): Unit = {
-    var approxSeq: Seq[Map[String, Long]] = Seq()
-
-    for (n <- 1 to 2000) {
-      if (n > 1 && array(n - 1) < array(n - 2) * 2) {
-        approxSeq = approxSeq :+ Map("n" -> n.toLong, "time (nanos)" -> array(n - 1) / 5)
-      }
-    }
-
-    println("100: " + array(99) / 5)
-    println("500: " + array(499) / 5)
-    println("2000: " + array(1999) / 5)
-
-    Vegas.layered("algs", width = 1000.0, height = 1000.0)
-      .withLayers(
-        Layer()
-          .withData(approxSeq)
-          .mark(Line)
-          .encodeX("n", Quant)
-          .encodeY("time (nanos)", Quant)
-      ).show
   }
 }
