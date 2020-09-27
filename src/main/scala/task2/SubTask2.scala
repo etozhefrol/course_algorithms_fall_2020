@@ -14,7 +14,7 @@ import vegas.{Area, Bar, Bin, Layer, Legend, Line, Nominal, Point, Quant, Scale,
 import scala.util.Random
 
 object SubTask2 {
-  val E = 0.001
+  val eps = 0.001
   val D = 0.0001
 
   val X_NUM = 100
@@ -31,49 +31,12 @@ object SubTask2 {
     val function: SimpleFunctionFiniteDiffGradient = new SimpleFunctionFiniteDiffGradient(v => calcSquares(y, v(0), v(1))(f1), new ConfigPars(/*maxIter = Int.MaxValue*/))
 
     var res1 = gaussMethod(y)(f1)
-    //    var res2 = NewtonCG.minimize((x: Variables) => x dot x, Vector(2.0, 4.0))
-    //    var res2 = NewtonCG.minimize(((x: Variables) => x dot x, (x: Variables) => x * 2.0), Vector(2.0, 4.0))
-//    var res2 = ConjugateGradient.minimize(
-//      (x: Variables) => calcSquares(y, x(0), x(1))(f1),
-//      Vector(0.5, 0.5)
-//    )(CGConfig(
-//      maxIterZoom = 20,
-////      maxIterLine = 10,
-////      eps = E * 10,
-//      tol = E,
-//      c1 = E,
-//      c2 = E,
-//      c3 = E,
-//      method = "PR"
-//    ))
-
-//    var res2 = BFGS.minimize(
-//      (x: Variables) => calcSquares(y, x(0), x(1))(f1),
-//      Vector(0.5, 0.5)
-//    )(BFGSConfig(
-//      maxIterZoom = 20,
-////      maxIterLine = 10,
-////      eps = E * 10,
-//      tol = E,
-//      c1 = E,
-//      c2 = E,
-//      c3 = E
-//    ))
-
-    var res2 = LevenbergMarquardt.minimize(
-      SimpleMSEFunction(
-        (x: Variables, t: Variables) => Seq(f1(t(0), x(0), x(1))),
-        for (k <- 0 to X_NUM) yield DataPoint(x(k) + 0.01, y(k))),
-      Vector(0.232155, 0.57346)
-    )(new LevenbergMarquardtConfig(
-//        tol = E
-        stepBound = 0.1
-    ))
+    var res2 = gaussMethod(y)(f2)
 
     // todo: Visualize the data and the approximants obtained in a plot separately for each type of approximant
     println(res1)
     println(res2)
-    plotGraph(y, alpha, beta, res1._1, res1._2, res2.get(0), res2.get(1))
+    plotGraph(y, alpha, beta, res1._1, res1._2, res2._1, res2._2)
   }
 
   def generateY(alpha: Double, beta: Double): Array[Double] = {
@@ -102,8 +65,8 @@ object SubTask2 {
     var minVals = (Double.MaxValue, Double.MaxValue)
 
     for {
-      a <- 0.0 to 1.0 by E
-      b <- 0.0 to 1.0 by E
+      a <- 0.0 to 1.0 by eps
+      b <- 0.0 to 1.0 by eps
     } {
       val thisSqrs = calcSquares(y, a, b)(f)
 
@@ -122,7 +85,7 @@ object SubTask2 {
     var iteratingFirst = true
     var diff = Double.MaxValue
 
-    while (diff > E) {
+    while (diff > eps) {
       var minSqrs = Double.MaxValue
 
       if (iteratingFirst) {
@@ -161,7 +124,7 @@ object SubTask2 {
     minVals
   }
 
-  def nelderMeadMethod(y: Array[Double])
+  def nelderMeadMethod(eps: Double, y: Array[Double])
                       (f: (Double, Double, Double) => Double): (Double, Double) = {
     case class Point(a: Double, b: Double) {
       def +(other: Point): Point = Point(a + other.a, b + other.b)
@@ -202,7 +165,7 @@ object SubTask2 {
       Point(Random.nextDouble(), Random.nextDouble())
     )
 
-    while (lastSum - thisSum > E) {
+    while (lastSum - thisSum > eps) {
       lastSum = fh + fg + fl
 
       val pointsToF = startPoints.map(point => (point, _f(point))).sortBy(_._2)
