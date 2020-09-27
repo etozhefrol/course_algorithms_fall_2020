@@ -1,5 +1,13 @@
 package task2
 
+import com.github.bruneli.scalaopt.core.{ConfigPars, SimpleFunctionFiniteDiffGradient, Variables}
+import com.github.bruneli.scalaopt.core.gradient.{BFGS, BFGSConfig, CGConfig, ConjugateGradient, NewtonCG}
+import com.github.bruneli.scalaopt.core.gradient.NewtonCG.defaultConfig
+import com.github.bruneli.scalaopt.core._
+import com.github.bruneli.scalaopt.core.leastsquares.{LevenbergMarquardt, LevenbergMarquardtConfig}
+import SeqDataSetConverter._
+import com.github.bruneli.scalaopt.core.leastsquares.LevenbergMarquardt.defaultConfig
+import org.apache.commons.math3.fitting.leastsquares.{GaussNewtonOptimizer, LevenbergMarquardtOptimizer}
 import vegas.spec.Spec
 import vegas.{Area, Bar, Bin, Layer, Legend, Line, Nominal, Point, Quant, Scale, Vegas}
 
@@ -20,12 +28,52 @@ object SubTask2 {
 
     val y = generateY(alpha, beta)
 
-    val res1 = nelderMeadMethod(y)(f1)
-    val res2 = nelderMeadMethod(y)(f2)
+    val function: SimpleFunctionFiniteDiffGradient = new SimpleFunctionFiniteDiffGradient(v => calcSquares(y, v(0), v(1))(f1), new ConfigPars(/*maxIter = Int.MaxValue*/))
 
+    var res1 = gaussMethod(y)(f1)
+    //    var res2 = NewtonCG.minimize((x: Variables) => x dot x, Vector(2.0, 4.0))
+    //    var res2 = NewtonCG.minimize(((x: Variables) => x dot x, (x: Variables) => x * 2.0), Vector(2.0, 4.0))
+//    var res2 = ConjugateGradient.minimize(
+//      (x: Variables) => calcSquares(y, x(0), x(1))(f1),
+//      Vector(0.5, 0.5)
+//    )(CGConfig(
+//      maxIterZoom = 20,
+////      maxIterLine = 10,
+////      eps = E * 10,
+//      tol = E,
+//      c1 = E,
+//      c2 = E,
+//      c3 = E,
+//      method = "PR"
+//    ))
+
+//    var res2 = BFGS.minimize(
+//      (x: Variables) => calcSquares(y, x(0), x(1))(f1),
+//      Vector(0.5, 0.5)
+//    )(BFGSConfig(
+//      maxIterZoom = 20,
+////      maxIterLine = 10,
+////      eps = E * 10,
+//      tol = E,
+//      c1 = E,
+//      c2 = E,
+//      c3 = E
+//    ))
+
+    var res2 = LevenbergMarquardt.minimize(
+      SimpleMSEFunction(
+        (x: Variables, t: Variables) => Seq(f1(t(0), x(0), x(1))),
+        for (k <- 0 to X_NUM) yield DataPoint(x(k) + 0.01, y(k))),
+      Vector(0.232155, 0.57346)
+    )(new LevenbergMarquardtConfig(
+//        tol = E
+        stepBound = 0.1
+    ))
+
+    // todo: Visualize the data and the approximants obtained in a plot separately for each type of approximant
     println(res1)
     println(res2)
-    plotGraph(y, alpha, beta, res1._1, res1._2, res2._1, res2._2)
+    plotGraph(y, alpha, beta, res1._1, res1._2, res2.get(0), res2.get(1))
   }
 
   def generateY(alpha: Double, beta: Double): Array[Double] = {
@@ -114,11 +162,14 @@ object SubTask2 {
   }
 
   def nelderMeadMethod(y: Array[Double])
-                 (f: (Double, Double, Double) => Double): (Double, Double) = {
+                      (f: (Double, Double, Double) => Double): (Double, Double) = {
     case class Point(a: Double, b: Double) {
       def +(other: Point): Point = Point(a + other.a, b + other.b)
+
       def -(other: Point): Point = Point(a - other.a, b - other.b)
+
       def *(const: Double): Point = Point(a * const, b * const)
+
       def /(const: Double): Point = Point(a / const, b / const)
     }
 
@@ -156,13 +207,17 @@ object SubTask2 {
 
       val pointsToF = startPoints.map(point => (point, _f(point))).sortBy(_._2)
 
-      xh = pointsToF(2)._1; fh = pointsToF(2)._2
-      xg = pointsToF(1)._1; fg = pointsToF(1)._2
-      xl = pointsToF(0)._1; fl = pointsToF(0)._2
+      xh = pointsToF(2)._1;
+      fh = pointsToF(2)._2
+      xg = pointsToF(1)._1;
+      fg = pointsToF(1)._2
+      xl = pointsToF(0)._1;
+      fl = pointsToF(0)._2
 
       xc = (xg + xl) / 2
 
-      xr = xc * (1 + alpha) - (xh * alpha); fr = _f(xr)
+      xr = xc * (1 + alpha) - (xh * alpha);
+      fr = _f(xr)
 
       if (fr < fl) {
         xe = xc * (1 - gamma) + (xr * gamma)
@@ -196,7 +251,8 @@ object SubTask2 {
       def step6(): Unit = {
         def shrink(xi: Point): Point = xl + (xi - xl) / 2
 
-        val xs = xh * beta + (xc * (1 - beta)); val fs = _f(xs)
+        val xs = xh * beta + (xc * (1 - beta));
+        val fs = _f(xs)
 
         if (fs < fh) {
           xh = xs
