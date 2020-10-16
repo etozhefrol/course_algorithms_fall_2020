@@ -28,7 +28,8 @@ object Main {
   def D(point: Point): Double = D(point.a, point.b, point.c, point.d)
 
   def main(args: Array[String]): Unit = {
-    val res = NelderMead.minimize(EPS, 1000000)(D)
+    val res = NelderMead.minimize2(EPS, 1000000)(D)
+    println("0, 1, -3, 2")
     println(res)
     println(" ")
   }

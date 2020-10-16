@@ -1,3 +1,3 @@
-val a: Array[Int] = Array(2, 1, 3)
+val a: Array[(Int, Int)] = Array((2, 2), (1, 2), (3, 3))
 
-a.sortWith(_ < _)
+a.sortBy(-_._1)
