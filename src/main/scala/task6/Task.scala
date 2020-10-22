@@ -6,6 +6,7 @@ object Task {
   def main(args: Array[String]): Unit = {
     II.genField()
     II.show()
+    II.run()
   }
 }
 
@@ -121,11 +122,13 @@ object II {
   val cStart: Char = 'S'
   val cFinish: Char = 'F'
   val cDead: Char = 'd'
+  val cCalculated: Char = '.'
+  val cCurrent: Char = 'C'
 
   var start: Point = Point(0, 0)
   var finish: Point = Point(0, 0)
 
-  case class Point(x: Int, y: Int) {
+  case class Point(y: Int, x: Int) {
     def -(other: Point): Int = Math.abs(x - other.x) + Math.abs(y - other.y)
     def equals(other: Point): Boolean = x == other.x && y == other.y
     def ==(other: Point): Boolean = equals(other)
@@ -136,23 +139,26 @@ object II {
     def rand: Point = Point(Random.nextInt(FIELD_SIZE), Random.nextInt(FIELD_SIZE))
   }
 
-  case class Cell(var char: Char, var dStart: Int, point: Point, var from: Point) {
+  case class Cell(var char: Char, var dStart: Double, point: Point, var from: Point) {
     val dFinish: Int = point - finish
 
-    def dTotal: Int = dStart + dFinish
+    def dTotal: Double = dStart + dFinish
 
     def setDead(): Unit = char = cDead
+    def setCalculated(): Unit = char = cCalculated
+    def setCurrent(): Unit = char = cCurrent
 
-    def setParams(char: Char, dStart: Int): Unit = {
+    def setParams(char: Char, dStart: Double): Unit = {
       this.char = char
       this.dStart = dStart
     }
-    def setParams(dStart: Int): Unit = {
+    def setParams(dStart: Double): Unit = {
       this.dStart = dStart
     }
-    def setParams(dStart: Int, from: Point): Unit = {
+    def calculate(dStart: Double, from: Point): Unit = {
       this.dStart = dStart
       this.from = from
+      char = cCalculated
     }
 
     def isEmpty: Boolean = char == cEmpty
@@ -160,6 +166,7 @@ object II {
     def isStart: Boolean = char == cStart
     def isFinish: Boolean = char == cFinish
     def isDead: Boolean = char == cDead
+    def isCalculated: Boolean = char == cCalculated
   }
 
   val field: Array[Array[Cell]] = Array.fill(FIELD_SIZE)(Array.ofDim(FIELD_SIZE))
@@ -191,28 +198,49 @@ object II {
     }
   }
 
+
   def run(): Unit = {
-    def length(point: Point, i: Int, j: Int) =
-      if (point.x == j || point.y == i) LENGTH_STRAIGHT else LENGTH_STRAIGHT
+    def length(point: Point, i: Int, j: Int): Double =
+      if (point.x == j || point.y == i) 1.0 else Math.sqrt(2)
 
     def calcNeighbours(point: Point): Unit  = {
       for {
-        i <- Math.min(point.y - 1, 0) to Math.max(point.y + 1, FIELD_SIZE - 1)
-        j <- Math.min(point.x - 1, 0) to Math.max(point.x + 1, FIELD_SIZE - 1)
+        i <- Math.max(point.y - 1, 0) to Math.min(point.y + 1, FIELD_SIZE - 1)
+        j <- Math.max(point.x - 1, 0) to Math.min(point.x + 1, FIELD_SIZE - 1)
         if !field(i)(j).isObst && !field(i)(j).isDead && (point.y != i || point.x != j)
       } {
         if (field(point.y)(point.x).dStart + length(point, i, j) < field(i)(j).dStart) {
-          field(i)(j).setParams(field(point.y)(point.x).dStart + length(point, i, j), point)
+          field(i)(j).calculate(field(point.y)(point.x).dStart + length(point, i, j), point)
         }
       }
+    }
+
+    def chooseNext(point: Point): Point = {
+      var res = Point(0, 0)
+      var minD = Double.MaxValue
+
+      for {
+        i <- 0 until FIELD_SIZE
+        j <- 0 until FIELD_SIZE
+        if !field(i)(j).isObst && !field(i)(j).isDead && (field(i)(j).isCalculated || field(i)(j).isFinish)
+      } {
+        if (field(i)(j).dTotal < minD) {
+           res = field(i)(j).point
+        }
+      }
+
+      res
     }
 
     var current: Point = start
 
     while (current != finish) {
       calcNeighbours(current)
-
       field(current.y)(current.x).setDead()
+      println()
+      current = chooseNext(current)
+      field(current.y)(current.x).setCurrent()
+      show()
     }
   }
 
