@@ -4,9 +4,13 @@ import scala.util.Random
 
 object Task {
   def main(args: Array[String]): Unit = {
-    II.genField()
-    II.show()
-    II.run()
+    for (n <- 0 until 5) {
+      II.genField()
+      val tStart = System.nanoTime()
+      II.run()
+      val tFinish = System.nanoTime() - tStart
+      println(tFinish)
+    }
   }
 }
 
@@ -124,6 +128,7 @@ object II {
   val cDead: Char = 'd'
   val cCalculated: Char = '.'
   val cCurrent: Char = 'C'
+  val cResult: Char = '*'
 
   var start: Point = Point(0, 0)
   var finish: Point = Point(0, 0)
@@ -133,6 +138,38 @@ object II {
     def equals(other: Point): Boolean = x == other.x && y == other.y
     def ==(other: Point): Boolean = equals(other)
     def !=(other: Point): Boolean = !equals(other)
+    def lengthTo(i: Int, j: Int): Double =
+      if (x == j || y == i) 1.0 else Math.sqrt(2)
+
+    def calcNeighbours(): Unit  = {
+      for {
+        i <- Math.max(y - 1, 0) to Math.min(y + 1, FIELD_SIZE - 1)
+        j <- Math.max(x - 1, 0) to Math.min(x + 1, FIELD_SIZE - 1)
+        if !field(i)(j).isObst && !field(i)(j).isDead && (y != i || x != j)
+      } {
+        if (field(y)(x).dStart + lengthTo(i, j) < field(i)(j).dStart) {
+          field(i)(j).calculate(field(y)(x).dStart + lengthTo(i, j), this)
+        }
+      }
+    }
+
+    def chooseNext(): Point = {
+      var res = Point(0, 0)
+      var minD = Double.MaxValue
+
+      for {
+        i <- 0 until FIELD_SIZE
+        j <- 0 until FIELD_SIZE
+        if !field(i)(j).isObst && !field(i)(j).isDead && field(i)(j).isCalculated
+      } {
+        if (field(i)(j).dTotal < minD) {
+          res = field(i)(j).point
+          minD = field(i)(j).dTotal
+        }
+      }
+
+      res
+    }
   }
 
   object Point {
@@ -147,6 +184,7 @@ object II {
     def setDead(): Unit = char = cDead
     def setCalculated(): Unit = char = cCalculated
     def setCurrent(): Unit = char = cCurrent
+    def setResult(): Unit = char = cResult
 
     def setParams(char: Char, dStart: Double): Unit = {
       this.char = char
@@ -183,7 +221,7 @@ object II {
     }
 
     field(start.y)(start.x).setParams(cStart, 0)
-    field(finish.y)(finish.x).setParams(cFinish, Int.MinValue)
+    field(finish.y)(finish.x).setParams(cFinish, Int.MaxValue / 2)
 
     for (i <- 0 until OBSTACLE_COUNT) {
       var i = Random.nextInt(FIELD_SIZE)
@@ -198,53 +236,34 @@ object II {
     }
   }
 
-
   def run(): Unit = {
-    def length(point: Point, i: Int, j: Int): Double =
-      if (point.x == j || point.y == i) 1.0 else Math.sqrt(2)
-
-    def calcNeighbours(point: Point): Unit  = {
-      for {
-        i <- Math.max(point.y - 1, 0) to Math.min(point.y + 1, FIELD_SIZE - 1)
-        j <- Math.max(point.x - 1, 0) to Math.min(point.x + 1, FIELD_SIZE - 1)
-        if !field(i)(j).isObst && !field(i)(j).isDead && (point.y != i || point.x != j)
-      } {
-        if (field(point.y)(point.x).dStart + length(point, i, j) < field(i)(j).dStart) {
-          field(i)(j).calculate(field(point.y)(point.x).dStart + length(point, i, j), point)
-        }
-      }
-    }
-
-    def chooseNext(point: Point): Point = {
-      var res = Point(0, 0)
-      var minD = Double.MaxValue
-
-      for {
-        i <- 0 until FIELD_SIZE
-        j <- 0 until FIELD_SIZE
-        if !field(i)(j).isObst && !field(i)(j).isDead && (field(i)(j).isCalculated || field(i)(j).isFinish)
-      } {
-        if (field(i)(j).dTotal < minD) {
-           res = field(i)(j).point
-        }
-      }
-
-      res
-    }
-
     var current: Point = start
 
+    val tStart = System.nanoTime()
     while (current != finish) {
-      calcNeighbours(current)
+      current.calcNeighbours()
       field(current.y)(current.x).setDead()
-      println()
-      current = chooseNext(current)
+//      show()
+
+      current = current.chooseNext()
       field(current.y)(current.x).setCurrent()
-      show()
+//      show()
     }
+    val tFinish = System.nanoTime() - tStart
+
+    while (current != start) {
+      field(current.y)(current.x).setResult()
+      current = field(current.y)(current.x).from
+    }
+
+    field(start.y)(start.x).char = cStart
+    field(finish.y)(finish.x).char = cFinish
+    show()
+    println()
   }
 
   def show(): Unit = {
+    println()
     for (i <- 0 until FIELD_SIZE) {
       for (j <- 0 until FIELD_SIZE) {
         print(s"${field(i)(j).char.toString} | ")
