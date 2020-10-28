@@ -25,7 +25,7 @@ object SubTask1 {
 
   def f3(x: Double): Double = x * Math.sin(1 / x)
 
-  def bruteForce(section: (Double, Double))(f: Double => Double): (Long, Long) = {
+  def bruteForce(section: (Double, Double))(f: Double => Double): (Long, Long, Double) = {
     var fIterator: Long = 0
     var iIterator: Long = 0
 
@@ -44,19 +44,22 @@ object SubTask1 {
       fIterator += 1
     }
 
-    (fIterator, iIterator)
+    (fIterator, iIterator, res)
   }
 
-  def dichotomy(section: (Double, Double))(f: Double => Double): (Long, Long) = {
+  def dichotomy(section: (Double, Double))(f: Double => Double): (Long, Long, (Double, Double)) = {
     var fIterator: Long = 0
     var iIterator: Long = 0
 
     var p = (section._1, section._2)
     val D = E / 10
 
+    var x1 = 0.0
+    var x2 = 0.0
+
     while (p._2 - p._1 > E) {
-      val x1 = ((p._1 + p._2) - D) / 2
-      val x2 = ((p._1 + p._2) + D) / 2
+      x1 = ((p._1 + p._2) - D) / 2
+      x2 = ((p._1 + p._2) + D) / 2
 
       p = if (f(x1) <= f(x2)) {
         (p._1, x2)
@@ -68,10 +71,10 @@ object SubTask1 {
       fIterator += 2
     }
 
-    (fIterator, iIterator)
+    (fIterator, iIterator, (x1, x2))
   }
 
-  def goldenSection(section: (Double, Double))(f: Double => Double): (Long, Long) = {
+  def goldenSection(section: (Double, Double))(f: Double => Double): (Long, Long, (Double, Double)) = {
     var fIterator: Long = 0
     var iIterator: Long = 0
 
@@ -95,6 +98,6 @@ object SubTask1 {
       fIterator += 2
     }
 
-    (fIterator, iIterator)
+    (fIterator, iIterator, x)
   }
 }

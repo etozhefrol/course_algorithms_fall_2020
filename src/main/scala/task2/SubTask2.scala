@@ -30,13 +30,24 @@ object SubTask2 {
 
     val function: SimpleFunctionFiniteDiffGradient = new SimpleFunctionFiniteDiffGradient(v => calcSquares(y, v(0), v(1))(f1), new ConfigPars(/*maxIter = Int.MaxValue*/))
 
-    var res1 = gaussMethod(y)(f1)
-    var res2 = gaussMethod(y)(f2)
+    val now1 = System.nanoTime()
+    var res1 = exhaustiveSearch(y)(f1)
+    println(System.nanoTime() - now1)
+
+    val now2 = System.nanoTime()
+    var res2 = gaussMethod(y)(f1)
+    println(System.nanoTime() - now2)
+
+    val now3 = System.nanoTime()
+    var res3 = nelderMeadMethod(eps, y)(f1)
+    println(System.nanoTime() - now3)
 
     // todo: Visualize the data and the approximants obtained in a plot separately for each type of approximant
     println(res1)
     println(res2)
-    plotGraph(y, alpha, beta, res1._1, res1._2, res2._1, res2._2)
+    println(res3)
+
+    plotGraph(y, alpha, beta, res1._1, res1._2, res2._1, res2._2, res3._1, res3._2)
   }
 
   def generateY(alpha: Double, beta: Double): Array[Double] = {
@@ -60,9 +71,11 @@ object SubTask2 {
   }
 
   def exhaustiveSearch(y: Array[Double])
-                      (f: (Double, Double, Double) => Double): (Double, Double) = {
+                      (f: (Double, Double, Double) => Double): (Double, Double, (Int, Int)) = {
     var minSqrs = Double.MaxValue
     var minVals = (Double.MaxValue, Double.MaxValue)
+
+    var (it, fi) = (0, 0)
 
     for {
       a <- 0.0 to 1.0 by eps
@@ -74,16 +87,21 @@ object SubTask2 {
         minSqrs = thisSqrs
         minVals = (a, b)
       }
+
+      it = it + 1
+      fi = fi + 1
     }
 
-    minVals
+    (minVals._1, minVals._2, (it, fi))
   }
 
   def gaussMethod(y: Array[Double])
-                 (f: (Double, Double, Double) => Double): (Double, Double) = {
+                 (f: (Double, Double, Double) => Double): (Double, Double, (Int, Int)) = {
     var minVals = (Random.nextDouble(), Random.nextDouble())
     var iteratingFirst = true
     var diff = Double.MaxValue
+
+    var (it, fi) = (0, 0)
 
     while (diff > eps) {
       var minSqrs = Double.MaxValue
@@ -98,6 +116,9 @@ object SubTask2 {
             minSqrs = thisSqrs
             minA = a
           }
+
+          it = it + 1
+          fi = fi + 1
         }
 
         diff = Math.abs(minVals._1 - minA)
@@ -113,6 +134,9 @@ object SubTask2 {
             minSqrs = thisSqrs
             minB = b
           }
+
+          it = it + 1
+          fi = fi + 1
         }
 
         diff = Math.abs(minVals._2 - minB)
@@ -121,11 +145,11 @@ object SubTask2 {
       }
     }
 
-    minVals
+    (minVals._1, minVals._2, (it, fi))
   }
 
   def nelderMeadMethod(eps: Double, y: Array[Double])
-                      (f: (Double, Double, Double) => Double): (Double, Double) = {
+                      (f: (Double, Double, Double) => Double): (Double, Double, (Int, Int)) = {
     case class Point(a: Double, b: Double) {
       def +(other: Point): Point = Point(a + other.a, b + other.b)
 
@@ -136,7 +160,12 @@ object SubTask2 {
       def /(const: Double): Point = Point(a / const, b / const)
     }
 
-    def _f(point: Point): Double = calcSquares(y, point.a, point.b)(f)
+    var (it, fi) = (0, 0)
+
+    def _f(point: Point): Double = {
+      fi += 1
+      calcSquares(y, point.a, point.b)(f)
+    }
 
     val alpha = 1
     val beta = 0.5
@@ -230,6 +259,8 @@ object SubTask2 {
 
       startPoints = Array(xl, xg, xh)
 
+      it = it + 1
+
       thisSum = fh + fg + fl
 
       if (fh < fg) {
@@ -247,12 +278,12 @@ object SubTask2 {
       }
     }
 
-    (bestPoint.a, bestPoint.b)
+    (bestPoint.a, bestPoint.b, (it, fi))
   }
 
   def plotGraph(y: Array[Double], alpha: Double, beta: Double,
-                a1: Double, b1: Double, a2: Double, b2: Double): Unit = {
-    val colors = List("#47FF62", "#FF49FB", "#5672FF", "#FF5238")
+                a1: Double, b1: Double, a2: Double, b2: Double, a3: Double, b3: Double): Unit = {
+    val colors = List("#47FF62", "#FF49FB", "#5672FF", "#FF5238", "#38C6FF", "#AC30FF", "#FF1500", "#404040")
 
     def round(d: Double): Double = BigDecimal(d).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble
 
@@ -268,13 +299,18 @@ object SubTask2 {
     )
 
     val graph1: Seq[Map[String, Any]] = Seq(
-      Map("x" -> 0.0, "y" -> f1(0.0, a1, b1), "color" -> s"${round(a1)} * x + ${round(b1)} (linear approx)"),
-      Map("x" -> 1.0, "y" -> f1(1.0, a1, b1), "color" -> s"${round(a1)} * x + ${round(b1)} (linear approx)")
+      Map("x" -> 0.0, "y" -> f1(0.0, a1, b1), "color" -> s"${round(a1)} * x + ${round(b1)} (exhaustive)"),
+      Map("x" -> 1.0, "y" -> f1(1.0, a1, b1), "color" -> s"${round(a1)} * x + ${round(b1)} (exhaustive)")
     )
 
     val graph2: Seq[Map[String, Any]] = Seq(
-      Map("x" -> 0.0, "y" -> f1(0.0, a2, b2), "color" -> s"${round(a2)} * x + ${round(b2)} (rational approx)"),
-      Map("x" -> 1.0, "y" -> f1(1.0, a2, b2), "color" -> s"${round(a2)} * x + ${round(b2)} (rational approx)")
+      Map("x" -> 0.0, "y" -> f1(0.0, a2, b2), "color" -> s"${round(a2)} * x + ${round(b2)} (gauss)"),
+      Map("x" -> 1.0, "y" -> f1(1.0, a2, b2), "color" -> s"${round(a2)} * x + ${round(b2)} (gauss)")
+    )
+
+    val graph3: Seq[Map[String, Any]] = Seq(
+      Map("x" -> 0.0, "y" -> f1(0.0, a3, b3), "color" -> s"${round(a3)} * x + ${round(b3)} (nelder-mead)"),
+      Map("x" -> 1.0, "y" -> f1(1.0, a3, b3), "color" -> s"${round(a3)} * x + ${round(b3)} (nelder-mead)")
     )
 
     val res = Vegas.layered("algs", width = 500, height = 500).withLayers(
@@ -298,6 +334,12 @@ object SubTask2 {
         .encodeColor(field = "color", Nominal, scale = Scale(rangeNominals = colors)),
       Layer()
         .withData(graph2)
+        .mark(Line)
+        .encodeX("x", Quant)
+        .encodeY("y", Quant)
+        .encodeColor(field = "color", Nominal, scale = Scale(rangeNominals = colors)),
+      Layer()
+        .withData(graph3)
         .mark(Line)
         .encodeX("x", Quant)
         .encodeY("y", Quant)
