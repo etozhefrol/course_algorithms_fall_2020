@@ -86,7 +86,8 @@ object Task {
     val levenbergMarquardt = LevenbergMarquardt.minimize(
       SimpleMSEFunction(
         (x: Variables, t: Variables) => Seq(f(t(0), x(0), x(1))),
-        for (k <- 0 to X_NUM) yield DataPoint(x(k) + 0.00001, y(k))),
+        for (k <- 0 to X_NUM) yield DataPoint(x(k) + 0.00001, y(k))
+      ),
       Vector(initA, initB)
     )(new LevenbergMarquardtConfig(stepBound = 0.1))
 
